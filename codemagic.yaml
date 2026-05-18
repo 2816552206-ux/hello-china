@@ -14,36 +14,28 @@ workflows:
         - pattern: master
           include: true
     scripts:
-      - name: Setup Flutter and iOS dependencies
+      - name: Setup
         script: |
           flutter clean
           flutter pub get
-          cd ios
-          pod install --repo-update
-          cd ..
-          xcodebuild -workspace ios/Runner.xcworkspace -list
-      - name: Build iOS app (release, ad-hoc signed)
-        script: |
-          flutter build ios --release
-          echo "=== Runner.app ==="
-          find build -name "Runner.app" -type d
-          APP=$(find build -name "Runner.app" -type d | head -1)
-          echo "签名状态:"
-          ls -la "$APP/_CodeSignature" 2>/dev/null && echo "ad-hoc已签名" || echo "未签名"
-      - name: Package IPA
+          cd ios && pod install --repo-update && cd ..
+      - name: Build and package IPA
         script: |
           set -e
+          ROOT="$PWD"
+          flutter build ios --release
           APP=$(find build -name "Runner.app" -type d | head -1)
-          echo "打包: $APP"
-          rm -rf /tmp/ipa
-          mkdir -p /tmp/ipa/Payload
-          cp -r "$APP" /tmp/ipa/Payload/
-          cd /tmp/ipa
-          zip -r /tmp/Runner.ipa Payload/
-          mkdir -p "$FCI_BUILD_DIR/build/ios/ipa"
-          cp /tmp/Runner.ipa "$FCI_BUILD_DIR/build/ios/ipa/Runner.ipa"
+          echo "App: $APP"
+          mkdir -p "$ROOT/build/ios/ipa"
+          cd "$(dirname "$APP")"
+          mkdir -p Payload
+          cp -R -p Runner.app Payload/
+          echo "Runner.app 可执行文件:"
+          file Payload/Runner.app/Runner
+          echo "生成 IPA (macOS ditto)..."
+          ditto -c -k --keepParent Payload "$ROOT/build/ios/ipa/Runner.ipa"
           echo "=== 完成 ==="
-          ls -la "$FCI_BUILD_DIR/build/ios/ipa/"
+          ls -la "$ROOT/build/ios/ipa/"
     artifacts:
       - build/ios/ipa/Runner.ipa
 
