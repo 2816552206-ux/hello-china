@@ -25,11 +25,18 @@ workflows:
       - name: Build iOS app
         script: |
           flutter build ios --debug --no-codesign
-      - name: Build IPA
+      - name: Package unsigned IPA
         script: |
-          flutter build ipa --debug
+          mkdir -p build/ios/ipa
+          cd build/ios/iphoneos
+          mkdir -p Payload
+          cp -r Runner.app Payload/
+          zip -r ../../../build/ios/ipa/Runner.ipa Payload/
+          cd ../../..
+          echo "IPA created at build/ios/ipa/Runner.ipa"
+          ls -la build/ios/ipa/
     artifacts:
-      - build/ios/ipa/*.ipa
+      - build/ios/ipa/Runner.ipa
 
   android-build:
     name: Android Build
