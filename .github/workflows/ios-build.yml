@@ -19,14 +19,11 @@ jobs:
           channel: 'beta'
           flutter-version: '3.44.0-0.3.pre'
 
-      - name: Setup
+      - name: Build iOS
         run: |
           flutter --version
           flutter pub get
-          cd ios && pod install --repo-update && cd ..
-
-      - name: Build iOS
-        run: flutter build ios --debug --no-codesign
+          flutter build ios --debug --no-codesign
 
       - name: Upload iOS App
         uses: actions/upload-artifact@v4
