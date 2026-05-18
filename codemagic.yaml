@@ -22,26 +22,26 @@ workflows:
           pod install --repo-update
           cd ..
           xcodebuild -workspace ios/Runner.xcworkspace -list
-      - name: Build unsigned IPA
+      - name: Build iOS app
+        script: |
+          flutter build ios --debug --no-codesign
+          echo "=== 查找 Runner.app ==="
+          find build -name "Runner.app" -type d
+      - name: Package IPA
         script: |
           set -e
-          flutter build ipa --debug --no-codesign --export-method development || {
-            echo "flutter build ipa failed, manually packaging..."
-            flutter build ios --debug --no-codesign
-            APP_PATH=$(find build/ios -name "Runner.app" -type d | head -1)
-            echo "Found Runner.app at: $APP_PATH"
-            mkdir -p build/ios/ipa
-            cd "$(dirname "$APP_PATH")"
-            mkdir -p Payload
-            cp -r Runner.app Payload/
-            zip -r "$FCI_BUILD_DIR/build/ios/ipa/Runner.ipa" Payload/
-            cd "$FCI_BUILD_DIR"
-          }
-          echo "=== IPA 检查 ==="
-          ls -la build/ios/ipa/ || echo "ipa 目录为空"
-          find build -name "*.ipa" -type f
+          APP=$(find build -name "Runner.app" -type d | head -1)
+          echo "打包: $APP"
+          rm -rf /tmp/ipa
+          mkdir -p /tmp/ipa/Payload
+          cp -r "$APP" /tmp/ipa/Payload/
+          cd /tmp/ipa
+          zip -r /tmp/Runner.ipa Payload/
+          mkdir -p "$FCI_BUILD_DIR/build/ios/ipa"
+          cp /tmp/Runner.ipa build/ios/ipa/Runner.ipa
+          echo "=== 结果 ==="
+          ls -la build/ios/ipa/
     artifacts:
-      - build/ios/ipa/*.ipa
       - build/ios/ipa/Runner.ipa
 
   android-build:
