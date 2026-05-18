@@ -1,3 +1,10 @@
+# 补回 CocoaPods 1.15+ 中移除的 platform_name 方法
+::Pod::Installer.class_eval do
+  def platform_name
+    :ios
+  end
+end
+
 platform :ios, '13.0'
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
