@@ -1,0 +1,21 @@
+workflows:
+  ios-build:
+    name: iOS Build
+    environment:
+      flutter: stable
+      xcode: latest
+      cocoapods: default
+    scripts:
+      - flutter pub get
+      - flutter build ios --debug --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app/**
+  android-build:
+    name: Android Build
+    environment:
+      flutter: stable
+    scripts:
+      - flutter pub get
+      - flutter build apk --debug
+    artifacts:
+      - build/app/outputs/flutter-apk/app-debug.apk
