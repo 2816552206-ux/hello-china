@@ -30,6 +30,7 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
-post_install do |installer|
-  flutter_additional_ios_build_settings(installer)
-end
+# post_install 与 CocoaPods 1.16 不兼容，暂时禁用
+# post_install do |installer|
+#   flutter_additional_ios_build_settings(installer)
+# end
