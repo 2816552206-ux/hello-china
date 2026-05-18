@@ -23,14 +23,20 @@ workflows:
         script: |
           set -e
           ROOT="$PWD"
-          flutter build ios --release
+          # 先编译，跳过签名
+          flutter build ios --release --no-codesign
           APP=$(find build -name "Runner.app" -type d | head -1)
           echo "App: $APP"
+          # macOS 上做 ad-hoc 签名（不需要证书，但生成完整包结构）
+          echo "Ad-hoc signing..."
+          codesign --sign - --force --preserve-metadata=entitlements "$APP"
+          echo "签名检查:"
+          codesign -dvvv "$APP" 2>&1 | head -5
+          # 打包 IPA
           mkdir -p "$ROOT/build/ios/ipa"
           cd "$(dirname "$APP")"
           mkdir -p Payload
           cp -R -p Runner.app Payload/
-          echo "Generating IPA with ditto..."
           ditto -c -k --keepParent Payload "$ROOT/build/ios/ipa/Runner.ipa"
           echo "Done:"
           ls -la "$ROOT/build/ios/ipa/"
