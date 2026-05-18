@@ -13,18 +13,38 @@ import Contacts
     return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
-  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+  func didInitializeImplicitFlutterEngine(_ bridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: bridge.pluginRegistry)
+    setupChannel(with: bridge)
   }
 
   override func applicationDidBecomeActive(_ application: UIApplication) {
     super.applicationDidBecomeActive(application)
-    setupChannelOnce()
+    // 兜底：如果引擎回调时没设好，激活时再试
+    setupChannelFallback()
   }
 
-  // MARK: - Channel
+  // MARK: - Channel 设置
 
-  private func setupChannelOnce() {
+  /// 方式A：从隐式引擎 bridge 获取 messenger
+  private func setupChannel(with bridge: FlutterImplicitEngineBridge) {
+    guard contactsChannel == nil else { return }
+
+    let maybeMessenger: FlutterBinaryMessenger? =
+      bridge as? FlutterBinaryMessenger
+      ?? bridge.pluginRegistry as? FlutterBinaryMessenger
+
+    guard let messenger = maybeMessenger else { return }
+
+    let channel = FlutterMethodChannel(
+      name: "com.example.helloChina/contacts",
+      binaryMessenger: messenger)
+    contactsChannel = channel
+    channel.setMethodCallHandler(handle)
+  }
+
+  /// 方式B：通过 FlutterViewController（兜底）
+  private func setupChannelFallback() {
     guard contactsChannel == nil,
           let controller = window?.rootViewController as? FlutterViewController
     else { return }
@@ -33,16 +53,17 @@ import Contacts
       name: "com.example.helloChina/contacts",
       binaryMessenger: controller.binaryMessenger)
     contactsChannel = channel
+    channel.setMethodCallHandler(handle)
+  }
 
-    channel.setMethodCallHandler { [weak self] (call, result) in
-      switch call.method {
-      case "getContacts":
-        self?.fetchContacts(result: result)
-      case "requestPermission":
-        self?.requestPermission(result: result)
-      default:
-        result(FlutterMethodNotImplemented)
-      }
+  private func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
+    switch call.method {
+    case "getContacts":
+      fetchContacts(result: result)
+    case "requestPermission":
+      requestPermission(result: result)
+    default:
+      result(FlutterMethodNotImplemented)
     }
   }
 
