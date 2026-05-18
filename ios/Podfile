@@ -1,12 +1,3 @@
-# 兼容 CocoaPods 1.16+，补回被移除的 platform_name 方法
-module Pod
-  class Installer
-    def platform_name
-      :ios
-    end
-  end
-end
-
 platform :ios, '13.0'
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
