@@ -22,14 +22,14 @@ workflows:
           pod install --repo-update
           cd ..
           xcodebuild -workspace ios/Runner.xcworkspace -list
-      - name: Build iOS app (ad-hoc signed)
+      - name: Build iOS app (release, ad-hoc signed)
         script: |
-          flutter build ios --debug
-          echo "=== 查找 Runner.app ==="
+          flutter build ios --release
+          echo "=== Runner.app ==="
           find build -name "Runner.app" -type d
-          echo "=== 检查签名 ==="
           APP=$(find build -name "Runner.app" -type d | head -1)
-          ls -la "$APP/_CodeSignature" 2>/dev/null && echo "签名目录存在" || echo "无签名目录"
+          echo "签名状态:"
+          ls -la "$APP/_CodeSignature" 2>/dev/null && echo "ad-hoc已签名" || echo "未签名"
       - name: Package IPA
         script: |
           set -e
