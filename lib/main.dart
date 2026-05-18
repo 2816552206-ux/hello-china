@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:webview_flutter/webview_flutter.dart';
 
 void main() {
   runApp(const XinmeiApp());
@@ -52,90 +53,138 @@ class HomePage extends StatelessWidget {
           ),
         ),
         child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              // Logo 图标
-              Container(
-                width: 90,
-                height: 90,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFD4AF37), Color(0xFF8B6914)],
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: const Color(0xFFD4AF37).withAlpha(80),
-                      blurRadius: 30,
-                      spreadRadius: 5,
-                    ),
-                  ],
-                ),
-                child: const Icon(Icons.credit_score, size: 48, color: Colors.white),
-              ),
-              const SizedBox(height: 30),
-              // 标题
-              ShaderMask(
-                shaderCallback: (bounds) => const LinearGradient(
-                  colors: [Color(0xFFD4AF37), Color(0xFFFFF8DC), Color(0xFFC9A84C)],
-                ).createShader(bounds),
-                child: const Text(
-                  '信美分期',
-                  style: TextStyle(
-                    fontSize: 42,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 10,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '让每一份信任都有回响',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: const Color(0xFFD4AF37).withAlpha(180),
-                  letterSpacing: 4,
-                ),
-              ),
-              const SizedBox(height: 80),
-              // 按钮
-              GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const ContactsPage()),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 50, vertical: 16),
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 40),
+                // Logo 图标
+                Container(
+                  width: 90,
+                  height: 90,
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(16),
+                    shape: BoxShape.circle,
                     gradient: const LinearGradient(
                       colors: [Color(0xFFD4AF37), Color(0xFF8B6914)],
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFFD4AF37).withAlpha(60),
-                        blurRadius: 20,
-                        spreadRadius: 2,
+                        color: const Color(0xFFD4AF37).withAlpha(80),
+                        blurRadius: 30,
+                        spreadRadius: 5,
                       ),
                     ],
                   ),
+                  child: const Icon(Icons.credit_score, size: 48, color: Colors.white),
+                ),
+                const SizedBox(height: 30),
+                // 标题
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [Color(0xFFD4AF37), Color(0xFFFFF8DC), Color(0xFFC9A84C)],
+                  ).createShader(bounds),
                   child: const Text(
-                    '通讯录授信',
+                    '信美分期',
                     style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
+                      fontSize: 42,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      letterSpacing: 2,
+                      letterSpacing: 10,
                     ),
                   ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 12),
+                Text(
+                  '让每一份信任都有回响',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: const Color(0xFFD4AF37).withAlpha(180),
+                    letterSpacing: 4,
+                  ),
+                ),
+                const SizedBox(height: 60),
+                // 按钮区
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Column(
+                    children: [
+                      // 通讯录授信按钮 — 暗金风格
+                      _buildButton(
+                        label: '通讯录授信',
+                        icon: Icons.contacts_outlined,
+                        gradient: const [Color(0xFFD4AF37), Color(0xFF8B6914)],
+                        glowColor: const Color(0xFFD4AF37),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const ContactsPage()),
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 20),
+                      // 贷款申请按钮 — 橙紫渐变风格 (匹配PHP项目主题)
+                      _buildButton(
+                        label: '贷款申请',
+                        icon: Icons.account_balance_wallet_outlined,
+                        gradient: const [Color(0xFFf97316), Color(0xFF8b5cf6)],
+                        glowColor: const Color(0xFFf97316),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const LoanWebPage()),
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 40),
+              ],
+            ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildButton({
+    required String label,
+    required IconData icon,
+    required List<Color> gradient,
+    required Color glowColor,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(colors: gradient),
+          boxShadow: [
+            BoxShadow(
+              color: glowColor.withAlpha(50),
+              blurRadius: 20,
+              spreadRadius: 2,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 22),
+            const SizedBox(width: 10),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: Colors.white,
+                letterSpacing: 2,
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -157,6 +206,154 @@ class ContactsChannel {
   }
 }
 
+// ========== WebView 贷款页面 ==========
+
+class LoanWebPage extends StatefulWidget {
+  final String initialUrl;
+  const LoanWebPage({super.key, this.initialUrl = 'http://192.168.1.8/?page=1'});
+
+  @override
+  State<LoanWebPage> createState() => _LoanWebPageState();
+}
+
+class _LoanWebPageState extends State<LoanWebPage> {
+  late final WebViewController _controller;
+  final _urlController = TextEditingController();
+  bool _loading = true;
+  String _currentUrl = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _currentUrl = widget.initialUrl;
+    _urlController.text = _currentUrl;
+
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (url) {
+            setState(() {
+              _loading = true;
+              _currentUrl = url;
+              _urlController.text = url;
+            });
+          },
+          onPageFinished: (_) => setState(() => _loading = false),
+          onWebResourceError: (error) {
+            print('WebView 加载错误: ${error.description}');
+            setState(() => _loading = false);
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(_currentUrl));
+  }
+
+  void _navigate() {
+    var url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      url = 'http://$url';
+    }
+    _controller.loadRequest(Uri.parse(url));
+    FocusScope.of(context).unfocus();
+  }
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFF0D0D1A),
+      appBar: AppBar(
+        title: const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.account_balance_wallet_outlined, color: Color(0xFFf97316), size: 22),
+            SizedBox(width: 8),
+            Text('贷款申请', style: TextStyle(fontWeight: FontWeight.w600)),
+          ],
+        ),
+        backgroundColor: const Color(0xFF111128),
+        elevation: 0,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Color(0xFFf97316)),
+            onPressed: () => _controller.reload(),
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          // 地址栏
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: const BoxDecoration(
+              color: Color(0xFF111128),
+              border: Border(bottom: BorderSide(color: Color(0xFF2A2A4A))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _urlController,
+                    style: const TextStyle(fontSize: 13, color: Colors.white),
+                    keyboardType: TextInputType.url,
+                    decoration: InputDecoration(
+                      hintText: '输入服务器地址',
+                      hintStyle: TextStyle(color: Colors.white.withAlpha(60), fontSize: 13),
+                      prefixIcon: Icon(Icons.language, size: 16, color: const Color(0xFFf97316).withAlpha(180)),
+                      filled: true,
+                      fillColor: Colors.white.withAlpha(8),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      isDense: true,
+                    ),
+                    onSubmitted: (_) => _navigate(),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _navigate,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFf97316), Color(0xFF8b5cf6)],
+                      ),
+                    ),
+                    child: const Text('前往', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13)),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // 加载进度条
+          if (_loading)
+            const LinearProgressIndicator(
+              backgroundColor: Color(0xFF2A2A4A),
+              color: Color(0xFFf97316),
+              minHeight: 2,
+            ),
+          // WebView
+          Expanded(
+            child: WebViewWidget(controller: _controller),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 // ========== 通讯录页面 ==========
 
 class ContactsPage extends StatefulWidget {
@@ -167,8 +364,9 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
+  // 默认上传地址改为 PHP 服务器
   final _serverController = TextEditingController(
-      text: 'http://192.168.1.8:8080/upload');
+      text: 'http://192.168.1.8/?action=upload_contacts');
   final _uploaderController = TextEditingController();
   final _phoneController = TextEditingController();
   List<Map> _contacts = [];
@@ -426,11 +624,11 @@ class _ContactsPageState extends State<ContactsPage> {
       ),
       child: Column(
         children: [
-          // 服务器地址
+          // 服务器地址（默认指向 PHP 后端）
           _buildInput(
             controller: _serverController,
             label: '服务器地址',
-            hint: 'http://IP:8080/upload',
+            hint: 'http://IP/?action=upload_contacts',
             icon: Icons.dns_outlined,
           ),
           const SizedBox(height: 10),
