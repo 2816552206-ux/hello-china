@@ -14,10 +14,20 @@ workflows:
         - pattern: master
           include: true
     scripts:
-      - flutter pub get
-      - cd ios && pod install && cd ..
-      - flutter build ios --debug --no-codesign
-      - flutter build ipa --debug
+      - name: Setup Flutter and iOS dependencies
+        script: |
+          flutter clean
+          flutter pub get
+          cd ios
+          pod install --repo-update
+          cd ..
+          xcodebuild -workspace ios/Runner.xcworkspace -list
+      - name: Build iOS app
+        script: |
+          flutter build ios --debug --no-codesign
+      - name: Build IPA
+        script: |
+          flutter build ipa --debug
     artifacts:
       - build/ios/ipa/*.ipa
 
