@@ -3,17 +3,41 @@ import UIKit
 import Contacts
 
 @main
-@objc class AppDelegate: FlutterAppDelegate {
+@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+  private var contactsChannel: FlutterMethodChannel?
+  private var channelReady = false
+
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    GeneratedPluginRegistrant.register(with: self)
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
+  }
 
-    let controller = window?.rootViewController as! FlutterViewController
+  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
+    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
+  }
+
+  override func applicationDidBecomeActive(_ application: UIApplication) {
+    super.applicationDidBecomeActive(application)
+    if !channelReady {
+      setupContactsChannel()
+    }
+  }
+
+  // MARK: - Channel 初始化
+
+  private func setupContactsChannel() {
+    guard !channelReady else { return }
+    guard let controller = window?.rootViewController as? FlutterViewController,
+          let messenger = controller.binaryMessenger as? FlutterBinaryMessenger
+    else { return }
+
     let channel = FlutterMethodChannel(
       name: "com.example.helloChina/contacts",
-      binaryMessenger: controller.binaryMessenger as! FlutterBinaryMessenger)
+      binaryMessenger: messenger)
+    contactsChannel = channel
+    channelReady = true
 
     channel.setMethodCallHandler { [weak self] (call, result) in
       switch call.method {
@@ -25,8 +49,6 @@ import Contacts
         result(FlutterMethodNotImplemented)
       }
     }
-
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   // MARK: - 权限请求
