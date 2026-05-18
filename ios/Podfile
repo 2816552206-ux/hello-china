@@ -30,18 +30,12 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
-# 手动设置 Pods 编译参数，绕过 flutter_additional_ios_build_settings
-# 该函数依赖 CocoaPods 旧 API（platform_name/deployment_target 等），在 1.15+ 中已被移除
+# 手动设置编译参数（绕过 podhelper 中已被移除的旧 API）
 post_install do |installer|
-  flutter_engine = File.join(flutter_root, 'bin', 'cache', 'artifacts', 'engine', 'ios-release')
   installer.pods_project.targets.each do |target|
     target.build_configurations.each do |config|
       config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
       config.build_settings['ENABLE_BITCODE'] = 'NO'
-      # Flutter 框架搜索路径
-      paths = config.build_settings['FRAMEWORK_SEARCH_PATHS'] || ['$(inherited)']
-      paths << flutter_engine unless paths.include?(flutter_engine)
-      config.build_settings['FRAMEWORK_SEARCH_PATHS'] = paths
     end
   end
 end
