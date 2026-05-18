@@ -16,13 +16,14 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
-          channel: 'stable'
+          channel: 'beta'
+          flutter-version: '3.44.0-0.3.pre'
 
       - name: Setup
         run: |
           flutter --version
           flutter pub get
-          cd ios && pod install && cd ..
+          cd ios && pod install --repo-update && cd ..
 
       - name: Build iOS
         run: flutter build ios --debug --no-codesign
