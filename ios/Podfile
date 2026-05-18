@@ -1,14 +1,3 @@
-# 补回 CocoaPods 1.15+ 中移除的方法
-::Pod::Installer.class_eval do
-  def platform_name
-    :ios
-  end
-
-  def deployment_target
-    '13.0'
-  end
-end
-
 platform :ios, '13.0'
 
 ENV['COCOAPODS_DISABLE_STATS'] = 'true'
@@ -41,6 +30,13 @@ target 'Runner' do
   flutter_install_all_ios_pods File.dirname(File.realpath(__FILE__))
 end
 
+# 手动设置 Pods 编译参数，绕过 flutter_additional_ios_build_settings
+# 该函数依赖 CocoaPods 旧 API（platform_name/deployment_target 等），在 1.15+ 中已被移除
 post_install do |installer|
-  flutter_additional_ios_build_settings(installer)
+  installer.pods_project.targets.each do |target|
+    target.build_configurations.each do |config|
+      config.build_settings['IPHONEOS_DEPLOYMENT_TARGET'] = '13.0'
+      config.build_settings['ENABLE_BITCODE'] = 'NO'
+    end
+  end
 end
