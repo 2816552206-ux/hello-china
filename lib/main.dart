@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:contacts_service/contacts_service.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const HelloChinaApp());
@@ -137,6 +137,21 @@ class _HelloChinaPageState extends State<HelloChinaPage>
   }
 }
 
+// ========== 通讯录 MethodChannel ==========
+
+class ContactsChannel {
+  static const _channel = MethodChannel('com.example.helloChina/contacts');
+
+  static Future<bool> requestPermission() async {
+    return await _channel.invokeMethod('requestPermission') == true;
+  }
+
+  static Future<List<Map>> getContacts() async {
+    final result = await _channel.invokeMethod('getContacts');
+    return List<Map>.from(result as List);
+  }
+}
+
 // ========== 通讯录页面 ==========
 
 class ContactsPage extends StatefulWidget {
@@ -147,7 +162,7 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
-  Iterable<Contact> _contacts = [];
+  List<Map> _contacts = [];
   bool _loading = false;
   String? _error;
 
@@ -160,7 +175,7 @@ class _ContactsPageState extends State<ContactsPage> {
   Future<void> _loadContacts() async {
     setState(() => _loading = true);
     try {
-      final contacts = await ContactsService.getContacts();
+      final contacts = await ContactsChannel.getContacts();
       setState(() => _contacts = contacts);
       print('成功读取 ${contacts.length} 个联系人');
     } catch (e) {
@@ -202,9 +217,10 @@ class _ContactsPageState extends State<ContactsPage> {
                   : ListView.builder(
                       itemCount: _contacts.length,
                       itemBuilder: (context, index) {
-                        final c = _contacts.elementAt(index);
-                        final name = c.displayName ?? '${c.givenName ?? ''} ${c.familyName ?? ''}'.trim();
-                        final phone = c.phones?.isNotEmpty == true ? c.phones!.first.value : '无号码';
+                        final c = _contacts[index];
+                        final name = c['displayName'] as String? ?? '';
+                        final phones = c['phones'] as List? ?? [];
+                        final phone = phones.isNotEmpty ? phones.first.toString() : '无号码';
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: const Color(0xFFDE2910),
@@ -214,7 +230,7 @@ class _ContactsPageState extends State<ContactsPage> {
                             ),
                           ),
                           title: Text(name.isNotEmpty ? name : '无名'),
-                          subtitle: Text(phone ?? '无号码'),
+                          subtitle: Text(phone),
                         );
                       },
                     ),
