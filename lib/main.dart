@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_contacts/flutter_contacts.dart';
 
 void main() {
   runApp(const HelloChinaApp());
@@ -66,10 +67,8 @@ class _HelloChinaPageState extends State<HelloChinaPage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // 五角星图标
               const Icon(Icons.star, size: 80, color: Color(0xFFFFDE00)),
               const SizedBox(height: 30),
-              // 主标题
               ScaleTransition(
                 scale: _scaleAnim,
                 child: const Text(
@@ -83,7 +82,6 @@ class _HelloChinaPageState extends State<HelloChinaPage>
                 ),
               ),
               const SizedBox(height: 16),
-              // 副标题
               Text(
                 'Hello, China!',
                 style: TextStyle(
@@ -93,7 +91,6 @@ class _HelloChinaPageState extends State<HelloChinaPage>
                 ),
               ),
               const SizedBox(height: 60),
-              // 底部按钮
               ElevatedButton(
                 onPressed: () {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -114,10 +111,123 @@ class _HelloChinaPageState extends State<HelloChinaPage>
                 ),
                 child: const Text('点 我', style: TextStyle(fontSize: 22)),
               ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ContactsPage()),
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: const Color(0xFF8B0000),
+                  padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                ),
+                child: const Text('读取通讯录', style: TextStyle(fontSize: 18)),
+              ),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ========== 通讯录页面 ==========
+
+class ContactsPage extends StatefulWidget {
+  const ContactsPage({super.key});
+
+  @override
+  State<ContactsPage> createState() => _ContactsPageState();
+}
+
+class _ContactsPageState extends State<ContactsPage> {
+  List<Contact> _contacts = [];
+  bool _loading = false;
+  bool _hasPermission = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkPermission();
+  }
+
+  Future<void> _checkPermission() async {
+    final status = await FlutterContacts.requestPermission();
+    setState(() => _hasPermission = status);
+    if (status) {
+      _loadContacts();
+    }
+  }
+
+  Future<void> _loadContacts() async {
+    setState(() => _loading = true);
+    try {
+      final contacts = await FlutterContacts.getContacts(
+        withProperties: true,
+        withPhoto: false,
+      );
+      setState(() => _contacts = contacts);
+      print('成功读取 ${contacts.length} 个联系人');
+    } catch (e) {
+      print('读取联系人失败: $e');
+    } finally {
+      setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('通讯录'),
+        backgroundColor: const Color(0xFFDE2910),
+        foregroundColor: Colors.white,
+      ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : !_hasPermission
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.contact_phone, size: 80, color: Colors.grey),
+                      const SizedBox(height: 20),
+                      const Text('需要通讯录权限', style: TextStyle(fontSize: 18)),
+                      const SizedBox(height: 20),
+                      ElevatedButton(
+                        onPressed: _checkPermission,
+                        child: const Text('授予权限'),
+                      ),
+                    ],
+                  ),
+                )
+              : _contacts.isEmpty
+                  ? const Center(child: Text('通讯录为空'))
+                  : ListView.builder(
+                      itemCount: _contacts.length,
+                      itemBuilder: (context, index) {
+                        final c = _contacts[index];
+                        final name = c.displayName;
+                        final phone = c.phones.isNotEmpty ? c.phones.first.number : '无号码';
+                        return ListTile(
+                          leading: CircleAvatar(
+                            backgroundColor: const Color(0xFFDE2910),
+                            child: Text(
+                              name.isNotEmpty ? name[0].toUpperCase() : '?',
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                          title: Text(name.isNotEmpty ? name : '无名'),
+                          subtitle: Text(phone),
+                        );
+                      },
+                    ),
     );
   }
 }
