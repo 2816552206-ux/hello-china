@@ -17,6 +17,7 @@ workflows:
       - name: Setup
         script: |
           gem install cocoapods -v 1.15.2
+          gem uninstall cocoapods -v 1.16.2 --force 2>/dev/null || true
           flutter clean
           flutter pub get
           cd ios && pod install --repo-update && cd ..
