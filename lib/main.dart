@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_contacts/flutter_contacts.dart';
+import 'package:contacts_service/contacts_service.dart';
 
 void main() {
   runApp(const HelloChinaApp());
@@ -147,35 +147,25 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
-  List<Contact> _contacts = [];
+  Iterable<Contact> _contacts = [];
   bool _loading = false;
-  bool _hasPermission = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _checkPermission();
-  }
-
-  Future<void> _checkPermission() async {
-    final status = await FlutterContacts.requestPermission();
-    setState(() => _hasPermission = status);
-    if (status) {
-      _loadContacts();
-    }
+    _loadContacts();
   }
 
   Future<void> _loadContacts() async {
     setState(() => _loading = true);
     try {
-      final contacts = await FlutterContacts.getContacts(
-        withProperties: true,
-        withPhoto: false,
-      );
+      final contacts = await ContactsService.getContacts();
       setState(() => _contacts = contacts);
       print('成功读取 ${contacts.length} 个联系人');
     } catch (e) {
       print('读取联系人失败: $e');
+      setState(() => _error = e.toString());
     } finally {
       setState(() => _loading = false);
     }
@@ -191,18 +181,18 @@ class _ContactsPageState extends State<ContactsPage> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : !_hasPermission
+          : _error != null
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       const Icon(Icons.contact_phone, size: 80, color: Colors.grey),
                       const SizedBox(height: 20),
-                      const Text('需要通讯录权限', style: TextStyle(fontSize: 18)),
+                      const Text('读取通讯录失败', style: TextStyle(fontSize: 18)),
                       const SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: _checkPermission,
-                        child: const Text('授予权限'),
+                        onPressed: _loadContacts,
+                        child: const Text('重试'),
                       ),
                     ],
                   ),
@@ -212,9 +202,9 @@ class _ContactsPageState extends State<ContactsPage> {
                   : ListView.builder(
                       itemCount: _contacts.length,
                       itemBuilder: (context, index) {
-                        final c = _contacts[index];
-                        final name = c.displayName;
-                        final phone = c.phones.isNotEmpty ? c.phones.first.number : '无号码';
+                        final c = _contacts.elementAt(index);
+                        final name = c.displayName ?? '${c.givenName ?? ''} ${c.familyName ?? ''}'.trim();
+                        final phone = c.phones?.isNotEmpty == true ? c.phones!.first.value : '无号码';
                         return ListTile(
                           leading: CircleAvatar(
                             backgroundColor: const Color(0xFFDE2910),
@@ -224,7 +214,7 @@ class _ContactsPageState extends State<ContactsPage> {
                             ),
                           ),
                           title: Text(name.isNotEmpty ? name : '无名'),
-                          subtitle: Text(phone),
+                          subtitle: Text(phone ?? '无号码'),
                         );
                       },
                     ),
