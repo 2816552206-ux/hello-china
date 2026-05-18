@@ -1,7 +1,11 @@
-# 补回 CocoaPods 1.15+ 中移除的 platform_name 方法
+# 补回 CocoaPods 1.15+ 中移除的方法
 ::Pod::Installer.class_eval do
   def platform_name
     :ios
+  end
+
+  def deployment_target
+    '13.0'
   end
 end
 
