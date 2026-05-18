@@ -62,6 +62,8 @@ import Contacts
       fetchContacts(result: result)
     case "requestPermission":
       requestPermission(result: result)
+    case "getDeviceName":
+      result(UIDevice.current.name)
     default:
       result(FlutterMethodNotImplemented)
     }
