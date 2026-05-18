@@ -1,12 +1,12 @@
 workflows:
   ios-build:
     name: iOS Build
-    instance_type: mac_mini_m2
     max_build_duration: 30
     environment:
       flutter: stable
       xcode: latest
       cocoapods: default
+    instance_type: mac_mini_m2
     triggering:
       events:
         - push
@@ -30,21 +30,19 @@ workflows:
           cd "$(dirname "$APP")"
           mkdir -p Payload
           cp -R -p Runner.app Payload/
-          echo "Runner.app 可执行文件:"
-          file Payload/Runner.app/Runner
-          echo "生成 IPA (macOS ditto)..."
+          echo "Generating IPA with ditto..."
           ditto -c -k --keepParent Payload "$ROOT/build/ios/ipa/Runner.ipa"
-          echo "=== 完成 ==="
+          echo "Done:"
           ls -la "$ROOT/build/ios/ipa/"
     artifacts:
       - build/ios/ipa/Runner.ipa
 
   android-build:
     name: Android Build
-    instance_type: linux_vm
     max_build_duration: 20
     environment:
       flutter: stable
+    instance_type: linux_vm
     triggering:
       events:
         - push
