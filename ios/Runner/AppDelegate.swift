@@ -5,7 +5,6 @@ import Contacts
 @main
 @objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
   private var contactsChannel: FlutterMethodChannel?
-  private var channelReady = false
 
   override func application(
     _ application: UIApplication,
@@ -20,24 +19,20 @@ import Contacts
 
   override func applicationDidBecomeActive(_ application: UIApplication) {
     super.applicationDidBecomeActive(application)
-    if !channelReady {
-      setupContactsChannel()
-    }
+    setupChannelOnce()
   }
 
-  // MARK: - Channel 初始化
+  // MARK: - Channel
 
-  private func setupContactsChannel() {
-    guard !channelReady else { return }
-    guard let controller = window?.rootViewController as? FlutterViewController,
-          let messenger = controller.binaryMessenger as? FlutterBinaryMessenger
+  private func setupChannelOnce() {
+    guard contactsChannel == nil,
+          let controller = window?.rootViewController as? FlutterViewController
     else { return }
 
     let channel = FlutterMethodChannel(
       name: "com.example.helloChina/contacts",
-      binaryMessenger: messenger)
+      binaryMessenger: controller.binaryMessenger)
     contactsChannel = channel
-    channelReady = true
 
     channel.setMethodCallHandler { [weak self] (call, result) in
       switch call.method {
@@ -51,11 +46,10 @@ import Contacts
     }
   }
 
-  // MARK: - 权限请求
+  // MARK: - 权限
 
   private func requestPermission(result: @escaping FlutterResult) {
-    let store = CNContactStore()
-    store.requestAccess(for: .contacts) { granted, error in
+    CNContactStore().requestAccess(for: .contacts) { granted, error in
       if let error = error {
         result(FlutterError(code: "PERMISSION_ERROR",
                             message: error.localizedDescription, details: nil))
@@ -65,35 +59,29 @@ import Contacts
     }
   }
 
-  // MARK: - 读取通讯录
+  // MARK: - 通讯录
 
   private func fetchContacts(result: @escaping FlutterResult) {
     let store = CNContactStore()
     let keys: [CNKeyDescriptor] = [
       CNContactGivenNameKey as CNKeyDescriptor,
       CNContactFamilyNameKey as CNKeyDescriptor,
-      CNContactPhoneNumbersKey as CNKeyDescriptor,
-      CNContactOrganizationNameKey as CNKeyDescriptor
+      CNContactPhoneNumbersKey as CNKeyDescriptor
     ]
     let request = CNContactFetchRequest(keysToFetch: keys)
-
     DispatchQueue.global(qos: .userInitiated).async {
-      var contacts: [[String: Any]] = []
+      var list: [[String: Any]] = []
       do {
         try store.enumerateContacts(with: request) { contact, _ in
-          var dict: [String: Any] = [:]
-          let given = contact.givenName
-          let family = contact.familyName
-          dict["givenName"] = given
-          dict["familyName"] = family
-          dict["displayName"] = "\(given) \(family)".trimmingCharacters(in: .whitespaces)
-          dict["organization"] = contact.organizationName
-          dict["phones"] = contact.phoneNumbers.map { $0.value.stringValue }
-          contacts.append(dict)
+          list.append([
+            "givenName": contact.givenName,
+            "familyName": contact.familyName,
+            "displayName": "\(contact.givenName) \(contact.familyName)"
+              .trimmingCharacters(in: .whitespaces),
+            "phones": contact.phoneNumbers.map { $0.value.stringValue }
+          ])
         }
-        DispatchQueue.main.async {
-          result(contacts)
-        }
+        DispatchQueue.main.async { result(list) }
       } catch {
         DispatchQueue.main.async {
           result(FlutterError(code: "FETCH_ERROR",
