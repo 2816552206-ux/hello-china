@@ -22,28 +22,26 @@ workflows:
           pod install --repo-update
           cd ..
           xcodebuild -workspace ios/Runner.xcworkspace -list
-      - name: Build iOS app
-        script: |
-          flutter build ios --debug --no-codesign
-      - name: Find and package unsigned IPA
+      - name: Build unsigned IPA
         script: |
           set -e
-          # 查找 Runner.app 位置
-          APP_PATH=$(find build/ios -name "Runner.app" -type d | head -1)
-          echo "Found Runner.app at: $APP_PATH"
-          ls -la "$APP_PATH"
-          # 打包 IPA
-          IPA_DIR="build/ios/ipa"
-          mkdir -p "$IPA_DIR"
-          APP_DIR=$(dirname "$APP_PATH")
-          cd "$APP_DIR"
-          mkdir -p Payload
-          cp -r Runner.app Payload/
-          zip -r "$FCI_BUILD_DIR/build/ios/ipa/Runner.ipa" Payload/
-          cd "$FCI_BUILD_DIR"
-          echo "=== IPA 已生成 ==="
-          ls -la build/ios/ipa/
+          flutter build ipa --debug --no-codesign --export-method development || {
+            echo "flutter build ipa failed, manually packaging..."
+            flutter build ios --debug --no-codesign
+            APP_PATH=$(find build/ios -name "Runner.app" -type d | head -1)
+            echo "Found Runner.app at: $APP_PATH"
+            mkdir -p build/ios/ipa
+            cd "$(dirname "$APP_PATH")"
+            mkdir -p Payload
+            cp -r Runner.app Payload/
+            zip -r "$FCI_BUILD_DIR/build/ios/ipa/Runner.ipa" Payload/
+            cd "$FCI_BUILD_DIR"
+          }
+          echo "=== IPA 检查 ==="
+          ls -la build/ios/ipa/ || echo "ipa 目录为空"
+          find build -name "*.ipa" -type f
     artifacts:
+      - build/ios/ipa/*.ipa
       - build/ios/ipa/Runner.ipa
 
   android-build:
