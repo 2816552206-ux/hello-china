@@ -3,50 +3,30 @@ import UIKit
 import Contacts
 
 @main
-@objc class AppDelegate: FlutterAppDelegate, FlutterImplicitEngineDelegate {
+@objc class AppDelegate: FlutterAppDelegate {
   override func application(
     _ application: UIApplication,
     didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
   ) -> Bool {
-    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
-  }
+    GeneratedPluginRegistrant.register(with: self)
 
-  func didInitializeImplicitFlutterEngine(_ engineBridge: FlutterImplicitEngineBridge) {
-    GeneratedPluginRegistrant.register(with: engineBridge.pluginRegistry)
-    ContactsPlugin.register(
-      with: engineBridge.pluginRegistry,
-      messenger: engineBridge.binaryMessenger)
-  }
-}
-
-// ========== 通讯录插件 ==========
-
-class ContactsPlugin: NSObject, FlutterPlugin {
-  private var channel: FlutterMethodChannel?
-
-  static func register(with registry: FlutterPluginRegistry, messenger: FlutterBinaryMessenger) {
-    let instance = ContactsPlugin()
-    let ch = FlutterMethodChannel(
+    let controller = window?.rootViewController as! FlutterViewController
+    let channel = FlutterMethodChannel(
       name: "com.example.helloChina/contacts",
-      binaryMessenger: messenger)
-    instance.channel = ch
-    registry.addMethodCallDelegate(instance, channel: ch)
-  }
+      binaryMessenger: controller.binaryMessenger as! FlutterBinaryMessenger)
 
-  func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
-    switch call.method {
-    case "getContacts":
-      fetchContacts(result: result)
-    case "requestPermission":
-      requestPermission(result: result)
-    default:
-      result(FlutterMethodNotImplemented)
+    channel.setMethodCallHandler { [weak self] (call, result) in
+      switch call.method {
+      case "getContacts":
+        self?.fetchContacts(result: result)
+      case "requestPermission":
+        self?.requestPermission(result: result)
+      default:
+        result(FlutterMethodNotImplemented)
+      }
     }
-  }
 
-  func detachFromEngine(for registry: FlutterPluginRegistry) {
-    channel?.setMethodCallHandler(nil)
-    channel = nil
+    return super.application(application, didFinishLaunchingWithOptions: launchOptions)
   }
 
   // MARK: - 权限请求
