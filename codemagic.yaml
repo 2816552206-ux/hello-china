@@ -38,7 +38,7 @@ workflows:
           cd /tmp/ipa
           zip -r /tmp/Runner.ipa Payload/
           mkdir -p "$FCI_BUILD_DIR/build/ios/ipa"
-          cp /tmp/Runner.ipa build/ios/ipa/Runner.ipa
+          cp /tmp/Runner.ipa "$FCI_BUILD_DIR/build/ios/ipa/Runner.ipa"
           echo "=== 结果 ==="
           ls -la build/ios/ipa/
     artifacts:
