@@ -1,21 +1,38 @@
 workflows:
   ios-build:
     name: iOS Build
+    instance_type: mac_mini_m2
+    max_build_duration: 30
     environment:
-      flutter: stable
+      flutter: 3.44.0-0.3.pre
       xcode: latest
       cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: master
+          include: true
     scripts:
       - flutter pub get
-      - flutter build ios --debug --no-codesign
+      - flutter build ipa --debug
     artifacts:
-      - build/ios/iphoneos/Runner.app/**
+      - build/ios/ipa/*.ipa
+
   android-build:
     name: Android Build
+    instance_type: linux_vm
+    max_build_duration: 20
     environment:
-      flutter: stable
+      flutter: 3.44.0-0.3.pre
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: master
+          include: true
     scripts:
       - flutter pub get
-      - flutter build apk --debug
+      - flutter build apk --release
     artifacts:
-      - build/app/outputs/flutter-apk/app-debug.apk
+      - build/app/outputs/flutter-apk/app-release.apk
